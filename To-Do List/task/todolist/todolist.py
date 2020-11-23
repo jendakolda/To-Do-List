@@ -1,5 +1,5 @@
 # Write your code here
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from sqlalchemy import Column, Integer, String, Date, create_engine
 from sqlalchemy.ext.declarative import declarative_base
@@ -19,7 +19,6 @@ class Table(Base):
 
 
 class ToDoList(object):
-    activities = ('Do yoga', 'Make breakfast', 'Learn basics of SQL', 'Learn what is ORM',)
 
     def __init__(self):
         engine = create_engine('sqlite:///todo.db?check_same_thread=False')
@@ -28,38 +27,64 @@ class ToDoList(object):
         self.session = Session()
 
     def menu(self):
-        menu_items = {'1': 'Today\'s tasks', '2': 'Add task', '0': 'Exit'}
-
+        menu_items = {'1': 'Today\'s tasks', '2': 'Week\'s tasks', '3': 'All tasks', '4': 'Add task', '0': 'Exit'}
         while True:
             for k, v in menu_items.items():
                 print(f'{k}) {v}')
             choice = int(input())
             if choice == 1:
-                self.todays_tasks()
+                self.show_tasks('Today')
             elif choice == 2:
+                self.show_tasks('Week')
+            elif choice == 3:
+                self.show_tasks()
+            elif choice == 4:
                 self.add_task()
             elif choice == 0:
-                print('Bye')
+                print('Bye!')
                 exit()
             else:
                 print('Incorrect input, try again.')
 
     def add_task(self):
         new_row = Table(task=input('Enter task\n'),
-                        deadline=datetime.strptime('01-24-2020', '%m-%d-%Y').today())
+                        deadline=datetime.strptime(input('Enter deadline\n'), '%Y-%m-%d'))
         self.session.add(new_row)
         self.session.commit()
         print('The task has been added\n')
 
-    def todays_tasks(self):
-        print('Today:')
-        rows = self.session.query(Table).all()
-        if rows:
-            for row in rows:
-                print(f'{row.id}. {row.task}')
-            print('\n')
-        else:
-            print('Nothing to do!\n')
+    def show_tasks(self, interval='all'):
+
+        if interval == 'all':
+            rows = self.session.query(Table).order_by(Table.deadline).all()
+            if rows:
+                for row in rows:
+                    print(f'{row.id}. {row.task}. {row.deadline.strftime("%#d %b")}')
+                print('\n')
+            else:
+                print('Nothing to do!\n')
+
+        elif interval == 'Today':
+            print(interval, datetime.today().strftime("%#d %b"))
+            rows = self.session.query(Table).filter(Table.deadline == datetime.today().date()).all()
+            if rows:
+                for row in rows:
+                    print(f'{row.id}. {row.task}')
+                print('\n')
+            else:
+                print('Nothing to do!\n')
+
+        elif interval == 'Week':
+            days = [datetime.today().date() + timedelta(days=i) for i in range(7)]
+            for day in days:
+                rows = self.session.query(Table).filter(Table.deadline == day).all()
+                print(day.strftime('%A %#d %b') + ':')
+                if rows:
+                    for row in rows:
+                        print(f'{row.id}. {row.task}')
+                    print('\n')
+                else:
+                    print('Nothing to do!\n')
 
 
 if __name__ == '__main__':
