@@ -27,7 +27,13 @@ class ToDoList(object):
         self.session = Session()
 
     def menu(self):
-        menu_items = {'1': 'Today\'s tasks', '2': 'Week\'s tasks', '3': 'All tasks', '4': 'Add task', '0': 'Exit'}
+        menu_items = {'1': 'Today\'s tasks',
+                      '2': 'Week\'s tasks',
+                      '3': 'All tasks',
+                      '4': 'Missed tasks',
+                      '5': 'Add task',
+                      '6': 'Delete task',
+                      '0': 'Exit'}
         while True:
             for k, v in menu_items.items():
                 print(f'{k}) {v}')
@@ -39,7 +45,11 @@ class ToDoList(object):
             elif choice == 3:
                 self.show_tasks()
             elif choice == 4:
+                self.show_tasks('Missed')
+            elif choice == 5:
                 self.add_task()
+            elif choice == 6:
+                self.delete_task()
             elif choice == 0:
                 print('Bye!')
                 exit()
@@ -52,6 +62,19 @@ class ToDoList(object):
         self.session.add(new_row)
         self.session.commit()
         print('The task has been added\n')
+
+    def delete_task(self):
+        print('Choose the number of the task you want to delete:')
+        self.show_tasks()
+        while True:
+            try:
+                self.session.delete(self.session.query(Table).order_by(Table.deadline).all()[int(input()) - 1])
+                break
+            except IndexError:
+                print('Invalid task ID.')
+
+        self.session.commit()
+        print('The task has been deleted!')
 
     def show_tasks(self, interval='all'):
 
@@ -85,6 +108,16 @@ class ToDoList(object):
                     print('\n')
                 else:
                     print('Nothing to do!\n')
+
+        elif interval == 'Missed':
+            print(interval, 'tasks')
+            rows = self.session.query(Table).filter(Table.deadline <= datetime.today().date()).all()
+            if rows:
+                for row in rows:
+                    print(f'{row.id}. {row.task}. {row.deadline.strftime("%#d %b")}')
+                print('\n')
+            else:
+                print('Nothing is missed!\n')
 
 
 if __name__ == '__main__':
